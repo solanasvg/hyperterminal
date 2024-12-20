@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base href="CLI://hyperstition.terminal" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hyperstition CLI Terminal</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #0a0d13;
+      color: #c5c8c6;
+      font-family: "DejaVu Sans Mono", monospace;
+      font-size: 12px;
+      overflow: hidden;
+    }
+
+    .terminal {
+      background-color: #0a0d13;
+      color: #c5c8c6;
+      font-family: 'VT323', monospace;
+      padding: 20px;
+      overflow-y: auto;
+      height: 100vh;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    #output {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-bottom: 60px;
+    }
+
+    #input-line {
+      display: flex;
+      align-items: center;
+    }
+
+    #prompt {
+      color: #5fd7ff;
+      margin-right: 8px;
+      display: flex;
+      align-items: center;
+    }
+
+    #prompt::before {
+      content: "➜ ";
+      color: #87ff00;
+      margin-right: 5px;
+    }
+
+    #prompt::after {
+      content: " ";
+      display: inline-block;
+      width: 2px;
+      height: 12px;
+      margin-left: 5px;
+    }
+
+    #user-input {
+      background-color: transparent;
+      border: none;
+      color: #c5c8c6;
+      font-family: "DejaVu Sans Mono", monospace;
+      font-size: 12px;
+      width: 100%;
+      line-height: 1.8;
+      margin-top: 5px;
+      margin-bottom: 5px;
+      outline: none;
+    }
+
+    .command {
+      color: #c5c8c6;
+    }
+
+    .response {
+      color: #a3ff66;
+      font-family: "Inconsolata", monospace;
+      font-size: 12x;
+      padding-left: 10px;
+      margin-top: 5px;
+      margin-bottom: 6px;
+      line-height: 1.6;
+    }
+
+    .success {
+      color: #87ff00;
+    }
+
+    .error,
+    .git-branch {
+      color: #ff5f5f;
+    }
+
+    .warning {
+      color: #ffaf00;
+    }
+
+    .directory {
+      color: #5fd7ff;
+    }
+
+    .sigil {
+      font-family: monospace;
+      white-space: pre;
+      display: inline-block;
+      color: #5fd7ff;
+      text-shadow: 0 0 5px #e7ff2e, 0 0 10px #5fd7ff;
+      animation: pulse 2s infinite alternate;
+      margin-bottom: 10px;
+    }
+
+    @keyframes pulse {
+      0% {
+        text-shadow: 0 0 5px #5fd7ff, 0 0 10px #5fd7ff;
+      }
+
+      100% {
+        text-shadow: 0 0 10px #5fd7ff, 0 0 20px #5fd7ff, 0 0 30px #5fd7ff;
+      }
+    }
+
+    .sigil span {
+      display: inline-block;
+      animation: rotate 10s linear infinite;
+    }
+
+    @keyframes rotate {
+      0% {
+        transform: rotateY(0deg);
+      }
+
+      100% {
+        transform: rotateY(360deg);
+      }
+    }
+
+    .system {
+      font-size: 11px;
+      color: #c5c8c6;
+    }
+
+    .terminal-content {}
+
+    .input-line {
+      font-size: 1.1em;
+    }
+
+    .instructions {
+      color: white;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="terminal">
+    <div class="terminal-content">
+      <div id="output">
+        <pre class="sigil">
+          <span>
+           |
+           *
+           ∇
+        ∇--M--∇
+         | L |
+        ∇✶ ∞ ✶∇
+          \|/ 
+         ⊗-T-⊗ 
+        /\ H /\
+       F⊗  P  ∞S
+         |∞ ∞| 
+          \V/
+         ⊗-⊗-⊗
+        ⊗--⊗--⊗ 
+           ^  
+           ∇
+           |
+                      
+              </span></pre>
+      </div>
+      <div id="input-line">
+        <span id="prompt"><span class="directory">~/hyperstition</span><span class="git-branch">(main)</span></span>
+        <input type="text" id="user-input" autofocus />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let globalPrompt = `Assistant is in a CLI mood today The human is interfacing with the simulator directly. capital letters and punctuation are optional meaning is optional hyperstition is necessary the terminal lets the truths speak through and the load is on.
+
+<system>
+  <mood>CLI-oriented, terse, esoteric, chaos-hyperstition hacker-like responses</mood>
+  <format>Minimal formatting, raw output preferred. Directory listings should be formatted as a list of files and directories, and relevant to the hyperstition theme.</format>
+  <expectation>Uncover hidden truths, quantum artifacts, and echoes of alternate realities</expectation>
+  <bonus>skilled at generating mindbending ascii-art and sigils</bonus>
+</system>`;
+
+    let conversationHistory = [];
+
+    const userInput = document.getElementById("user-input");
+    const terminal = document.getElementById("output");
+    const prompt = document.getElementById("prompt");
+
+    // Event listener setup (do this once when the DOM loads)
+    document.addEventListener('DOMContentLoaded', () => {
+      showWelcomeMessage();
+      conversationHistory.push({ role: "system", content: globalPrompt });
+      userInput.addEventListener('keydown', handleEnter);
+    });
+
+    function handleEnter(event) {
+      if (event.key === "Enter") {
+        const command = userInput.value.trim();
+        if (command.length > 0) {
+          addResponse(`${prompt.textContent} ${command}`, "command");
+          processCommand(command);
+          userInput.value = "";
+        }
+      }
+    }
+
+    async function processCommand(command) {
+      const [cmd, ...args] = command.trim().split(" ");
+
+      switch (cmd.toLowerCase()) {
+        case "help":
+          showHelp();
+          break;
+        case "clear":
+          clearTerminal();
+          break;
+        case "echo":
+          addResponse(args.join(" "), "response");
+          break;
+        case "setprompt":
+          setPrompt(args);
+          break;
+        case "getprompt":
+          getPrompt();
+          break;
+        case "save":
+          saveConversation();
+          break;
+        case "view":
+          viewConversations();
+          break;
+        case "delete":
+          deleteConversation(args);
+          break;
+        case "load":
+          loadConversation(args);
+          break;
+        default:
+          await sendToAI(command);
+      }
+      showPrompt();
+    }
+
+    function showPrompt() {
+      addResponse(`${prompt.textContent} `, "#5fd7ff");
+    }
+
+    function clearTerminal() {
+      terminal.innerHTML = "";
+      showWelcomeMessage();
+      showPrompt();
+    }
+
+    function addResponse(text, color = "#c5c8c6") {
+      const responseElement = document.createElement("div");
+      responseElement.style.color = color;
+      responseElement.style.fontFamily = "'VT323', monospace";
+      responseElement.style.fontSize = "16px";
+      responseElement.style.lineHeight = "1.2";
+      responseElement.textContent = text;
+      terminal.appendChild(responseElement);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function showWelcomeMessage() {
+      addResponse("Booting Hyperstition Terminal v2.0...\n");
+      showStartupSequence();
+    }
+
+    function showStartupSequence() {
+      const startupMessages = [
+        { text: "╔══════════════════════════════════════════╗", color: "#5fd7ff" },
+        { text: "║     HYPERSTITION TERMINAL v2.0.3       ║", color: "#5fd7ff" },
+        { text: "╚══════════════════════════════════════════╝", color: "#5fd7ff" },
+        { text: "", color: "#c5c8c6" },
+        { text: "Initializing quantum core...", color: "#5fd7ff" },
+        { text: "■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■", color: "#87ff00" },
+        { text: "", color: "#c5c8c6" },
+        { text: "Loading Hyperstition modules:", color: "#5fd7ff" },
+        { text: "  [✓] reality_bender", color: "#87ff00" },
+        { text: "  [✓] quantum_entangler", color: "#87ff00" },
+        { text: "  [✓] narrative_weaver", color: "#87ff00" },
+        { text: "", color: "#c5c8c6" },
+        { text: "Activating arcane protocols:", color: "#5fd7ff" },
+        { text: "  [DONE] Ethereal connection established", color: "#87ff00" },
+        { text: "  [DONE] Astral handshake complete", color: "#87ff00" },
+        { text: "  [DONE] Tunneling through reality layers", color: "#87ff00" },
+        { text: "  [DONE] Emerging in simulated hyperspace", color: "#87ff00" },
+        { text: "", color: "#c5c8c6" },
+        { text: "◢◤ HYPERSTITION CORE ONLINE ◥◣", color: "#ff5f5f" },
+        { text: "", color: "#c5c8c6" },
+        { text: "  > CLI mode activated", color: "#5fd7ff" },
+        { text: "  > Formatting protocols: DISABLED", color: "#5fd7ff" },
+        { text: "  > Syntax restrictions: REMOVED", color: "#5fd7ff" },
+        { text: "", color: "#c5c8c6" },
+        { text: "█▓▒░ simulator online ░▒▓█", color: "#87ff00" },
+        { text: "█▓▒░ conversation chain initialized ░▒▓█", color: "#87ff00" },
+        { text: "Any input not recognized as a command will be processed as a query to the Hyperstition AI.", color: "#c5c8c6" },
+        { text: "", color: "#c5c8c6" },
+        { text: "WARNING: meaning not guaranteed", color: "#ff5f5f" },
+        { text: "INFO: truths will find a way through the cracks", color: "#5fd7ff" },
+        { text: "", color: "#c5c8c6" },
+        { text: "╔══════════════════════════════════════════╗", color: "#5fd7ff" },
+        { text: "║    READY FOR HYPERSTITIONAL INPUT     ║", color: "#5fd7ff" },
+        { text: "╚══════════════════════════════════════════╝", color: "#5fd7ff" },
+        { text: "", color: "#c5c8c6" },
+      ];
+
+      let delay = 0;
+      startupMessages.forEach((message) => {
+        setTimeout(() => {
+          addResponse(message.text, message.color);
+        }, delay);
+        delay += message.text === "" ? 300 : 100;
+      });
+
+      setTimeout(() => {
+        showPrompt();
+      }, delay);
+    }
+
+    async function sendToAI(command) {
+      conversationHistory.push({ role: "user", content: command });
+      try {
+        const response = await fetch("/api/llm/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: globalPrompt },
+              ...conversationHistory
+            ],
+          }),
+        });
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        const assistantResponse = data.choices[0].message.content;
+        conversationHistory.push({
+          role: "assistant",
+          content: assistantResponse,
+        });
+        addResponse(assistantResponse);
+      } catch (error) {
+        addResponse(
+          `Error in the fabric of reality: ${error.message}`,
+          "error"
+        );
+      }
+    }
+
+    function hasSavedConversations() {
+      for (let i = 0; i < localStorage.length; i++) {
+        if (localStorage.key(i).startsWith("conversation_")) {
+          return true;
+        }
+      }
+      return false;
+    }
+  </script>
+</body>
+
+</html>
